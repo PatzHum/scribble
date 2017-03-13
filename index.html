@@ -1,0 +1,130 @@
+<html>
+    <head>
+    <script src='https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <!--Roboto-->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300|Roboto+Condensed" rel="stylesheet">
+    
+    <!--Desmos and Mathjax-->
+  <!--  <script src="https://www.desmos.com/api/v0.7/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script> 
+   --> 
+    <script src="js/index.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Scribble</title> 
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+    </script>
+    </head>
+    <style>
+        @keyframes blink{
+            50%{
+                opacity: 0;
+            }
+        }
+        .caret-blink{
+            animation: blink 1s linear infinite;
+            display: inline-block;
+        }
+
+        body{
+            background:#efefef;
+            font-family: Roboto;
+            font-size: 16px;
+        }
+        #top-bar{
+            width: 100%;
+            height: 120px;
+            position:fixed;
+            box-shadow: 4px 0px 6px grey;
+            background:white;
+            z-index:100;
+        }
+        .top-bar-row{
+            background:white;
+            box-shadow: 2px 2px 2px lightgrey;
+            height:38px;
+            padding:5px;
+            margin-bottom:2px;
+        }
+
+        #debug-bar p{
+            display: inline-block;
+            margin: 0;
+            padding:0;
+        }
+        #editor{
+            width: 8.5in;
+            min-height: 11in;
+            background:white;    
+            position:relative;
+            box-shadow: 0px 0px 4px grey;
+            top:150px;
+            border:none;
+            margin-right: auto;
+            margin-left: auto;
+            padding: 1in;
+        }
+        #debug-bar{
+            width:100%;
+            background:#454545;
+            color:white;
+        }
+        .square-btn{
+            width:30px;
+            height:100%;
+            background: lightgrey;
+            border: 1px solid grey;
+            display:inline-block;
+            outline:none;
+            margin:0;
+            box-shadow: none;
+            position: relative;
+            line-height: 1;
+            top:1px;
+            vertical-align: text-top;
+        }
+        .square-btn:active{
+            box-shadow: 1px 1px 1px darkgrey;
+        }
+        .current-style-box{
+            font-size: 10px;
+            background: mediumpurple;
+            color:white;
+            border: 4px solid #565656;
+            border-radius: 2px;
+            display: inline-block;
+        }
+    </style>
+    <body>
+        <div id="top-bar">
+            <div id="debug-bar">
+                <p id="debug-keycode"></p>
+                <p id="debug-keycode-keydown"></p>
+            </div>
+            <div class="top-bar-row">
+                <div id="current-styles"></div>
+            </div>
+            <div class="top-bar-row">
+                <button class="square-btn refocus" onclick="EditorBuilder.toggleStyle('h1')">h1</button> 
+                <button class="square-btn refocus" onclick="EditorBuilder.toggleStyle('h2')">h2</button> 
+                <button class="square-btn refocus" onclick="EditorBuilder.toggleStyle('h3')">h3</button> 
+                <button class="square-btn refocus" onclick="EditorBuilder.toggleStyle('h4')">h4</button> 
+            </div>
+            <div class="top-bar-row">
+                <button class="square-btn refocus" onclick="EditorBuilder.toggleStyle('B')"><b>b</b></button>
+                <button class="square-btn refocus" onclick="EditorBuilder.toggleStyle('I')"><em>i</em></button>
+                <button class="square-btn refocus" onclick="EditorBuilder.toggleStyle('U')"><u>u</u></button>
+                <button class="square-btn refocus glyphicon glyphicon-align-left" onclick="EditorBuilder.toggleStyle('left')"></button> 
+                <button class="square-btn refocus glyphicon glyphicon-align-center" onclick="EditorBuilder.toggleStyle('E')"></button> 
+                <button class="square-btn refocus glyphicon glyphicon-align-right" onclick="EditorBuilder.toggleStyle('right')"></button> 
+            </div>
+        </div>
+        <div id="editor" tabindex="1">
+        </div>
+    </body>
+</html>
