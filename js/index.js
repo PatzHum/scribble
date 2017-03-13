@@ -57,12 +57,13 @@ var EditorBuilder = new(function(){
     this.styles["h4"] = new Style("h4", "<h4 style='display:inline;'>", "</h4>", this.headerGroup);
 
     this.activeStyles = {};
+    this.activeStack = new Array();
+
     this.caret = 0;
     this.stack = new Array();
-    this.cache = {};
 
     this.toggleStyle = function(style){
-        if (!(style in this.activeStyles) || this.activeStyles[style] == false){
+/*        if (!(style in this.activeStyles) || this.activeStyles[style] == false){
 
             //Close all other stylegroup members before creating tag
             if (this.styles[style].styleGroup !== undefined){
@@ -88,11 +89,52 @@ var EditorBuilder = new(function(){
             }
             if (this.activeStyles[s] == true)
                 $("#current-styles").append("<div class='current-style-box' style='background:" + color + ";'>" + this.styles[s].name + "</div>"); 
+        }*/
+        if (style in this.styles){
+            if (this.activeStack.indexOf(style) == -1){
+                    this.append(this.styles[style].startTag);
+                    this.activeStack.push(style);
+            }else{
+                //Copy the old active stack
+                //Close all previous tags
+                //Re-push all tags except the one to close
+                var newActiveStack = this.activeStack.slice();
+                newActiveStack.splice(this.activeStack.indexOf(style), 1);
+                var closeStyle = "";
+                while (closeStyle = this.activeStack.pop()){
+                    this.append(this.styles[closeStyle].endTag);
+                }
+                this.activeStack = newActiveStack;
+                for (var i = 0; i < this.activeStack.length; ++i){
+                    this.append(this.styles[this.activeStack[i]].startTag);
+                }
+            }
+        }
+        this.updateStyleStack();
+    }
+    this.updateStyleStack = function(){
+        $("#current-styles").html("");
+        for (var i = 0; i < this.activeStack.length; ++i){
+            var color = "#9370db";
+            if (this.alignmentGroup.indexOf(this.activeStack[i]) != -1){
+                color = "#70db70";
+            }else if (this.headerGroup.indexOf(this.activeStack[i]) != -1){
+                color = "#dbdb70";
+            }
+            if (this.activeStack.indexOf(this.activeStack[i]) != -1)
+                $("#current-styles").append("<div class='current-style-box' style='background:" + color + ";'>" + this.styles[this.activeStack[i]].name + "</div>"); 
+        }
+        if (Editor.MathID != 0){
+            $("#current-styles").append("<div class='current-style-box' style='background:hotpink;'>math</div>"); 
         }
     }
     this.append = function(val){
-        this.stack.splice(this.caret, 0, val);
-        this.caret++;
+        if (Editor.MathID != 0){
+            $("#cache-" + Editor.MathID).append(val);
+        }else{            
+            this.stack.splice(this.caret, 0, val);
+            this.caret++;
+        }
     }
     this.bksp = function(){
         if (this.caret >= 0){
@@ -104,7 +146,7 @@ var EditorBuilder = new(function(){
         ret = "";
         for (var i = 0; i < this.stack.length; ++i){
             if (this.stack[i].split("-")[0] == "CACHE"){
-                ret += this.cache[this.stack[i].split("-")[1]];
+                ret += $("#cache-" + this.stack[i].split("-")[1]).prop('outerHTML');
             }else{
                 ret += this.stack[i];
             }
@@ -119,6 +161,16 @@ var Editor = {
     MathID : 0,
     RenderID : 0,
 };
+function update(){
+    $("#editor").html(EditorBuilder.toString());
+    if (Editor.RenderID != 0){
+        //Render math
+        $("#cache-" + Editor.RenderID).html("$" + $("#cache-" + Editor.RenderID).html() + "$");
+        MathJax.Hub.Queue(("cache-" + Editor.RenderID).toString(), ["Typeset", MathJax.Hub]);
+        Editor.RenderID = 0;
+    }
+    //MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+}
 $(document).ready(function(){  
     jQuery.fn.extend({
         insertAtCaret: function(myValue){
@@ -161,20 +213,22 @@ $(document).ready(function(){
     });
     $("#editor").keydown(function(e){
         var ch = String.fromCharCode(e.which);
-
         if (e.ctrlKey){
             if (e.which == 77)
             //Handle math differently
             {
                 if (Editor.MathID != 0){
                     //End math tag and close div
-                    EditorBuilder.append("$</div>");
                     Editor.RenderID = Editor.MathID;
                     Editor.MathID = 0;
+                    EditorBuilder.updateStyleStack(); 
                 }else{
                     //Generate some sort of randim id, unlikely to clash but non-fatal if it does
-                    Editor.MathID = Math.floor((Math.random() * 349582347) + 1);
-                    EditorBuilder.append("<div id='" + Editor.MathID + "'>$");
+                    var MathID = Math.floor((Math.random() * 349582347) + 1);
+                    EditorBuilder.append("CACHE-" +  MathID);
+                    Editor.MathID = MathID;
+                    $("#cache").append("<div id='cache-" + Editor.MathID + "' class='cached-item'></div>")
+                    EditorBuilder.updateStyleStack();
                 } 
             }else if (ch in EditorBuilder.styles){
                 EditorBuilder.toggleStyle(ch);
@@ -185,6 +239,7 @@ $(document).ready(function(){
         }
 
         $("#debug-keycode-keydown").html("KEYDOWN: " + e.which); 
+        update();
     });
     $("#editor").keypress(function (e){
         var ch = String.fromCharCode(e.which);
@@ -201,25 +256,10 @@ $(document).ready(function(){
         if (preventDefault){
             e.preventDefault();
         }
-
-        $("#editor").html(EditorBuilder.toString());
-        if (Editor.RenderID != 0){
-            //Render math
-            //MathJax.Hub.Queue(Editor.RenderID.toString(), ["Typeset", MathJax.Hub]);
-            Editor.RenderID = 0;
-        }
-        MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
-
+        update();
     });
-    
     $("#editor").keyup(function(e){
-        $("#editor").html(EditorBuilder.toString());
-        if (Editor.RenderID != 0){
-            //Render math
-            //MathJax.Hub.Queue(Editor.RenderID.toString(), ["Typeset", MathJax.Hub]);
-            Editor.RenderID = 0;
-        }
-        MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+        update(); 
     });
 
 
