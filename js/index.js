@@ -1,34 +1,3 @@
-
-var StyleManager = new (function(){
-    this.stack = {};
-    this.toggleStyle = function(style){
-        if (style in stack){
-            this.stack[style] = false;
-        }
-    }
-})();
-
-var CursorManager = new(function(){
-    this.s = 0;
-    this.e = 0;
-    this.decrementEnd = function(){
-        this.e--;
-    }
-    this.decrementStart = function(){
-        this.s--;
-    }
-    this.incrementEnd = function(){
-        this.e++;
-    }
-    this.incrementStart = function(){
-        this.s++;
-    }
-    this.incrementBoth = function(){
-        this.incrementStart();
-        this.incrementEnd();
-    }
-})();
-
 function Style(name, startTag, endTag, radioGroup){
     this.name = name;
     this.startTag = startTag;
@@ -41,9 +10,9 @@ function Style(name, startTag, endTag, radioGroup){
 
 var EditorBuilder = new(function(){
     this.styles = {};
-    this.styles["B"] = new Style("bold","<b>", "</b>");
-    this.styles["U"] = new Style("underline", "<u>", "</u>");
-    this.styles["I"] = new Style("italic" ,"<em>", "</em>");
+    this.styles["B"] = new Style("bold","<div style='font-weight:bold'>", "</div>");
+    this.styles["U"] = new Style("underline", "<div style='text-decoration:underline'>", "</div>");
+    this.styles["I"] = new Style("italic" ,"<div style='font-style:italic'>", "</div>");
 
     this.alignmentGroup = ["E", "left", "right"];
     this.styles["E"] = new Style("center", "<div style=\"text-align:center;\">", "</div>", this.alignmentGroup);
@@ -56,7 +25,6 @@ var EditorBuilder = new(function(){
     this.styles["h3"] = new Style("h3", "<h3 style='display:inline;'>", "</h3>", this.headerGroup);
     this.styles["h4"] = new Style("h4", "<h4 style='display:inline;'>", "</h4>", this.headerGroup);
 
-    this.activeStyles = {};
     this.activeStack = new Array();
 
     this.caret = 0;
@@ -92,8 +60,15 @@ var EditorBuilder = new(function(){
         }*/
         if (style in this.styles){
             if (this.activeStack.indexOf(style) == -1){
-                    this.append(this.styles[style].startTag);
-                    this.activeStack.push(style);
+                if (this.styles[style].styleGroup !== undefined){
+                    for (var i = 0; i < this.styles[style].styleGroup.length; ++i){
+                        if (this.activeStack.indexOf(this.styles[style].styleGroup[i]) != -1){
+                            this.toggleStyle(this.styles[style].styleGroup[i]); 
+                        } 
+                    }
+                }
+                this.append(this.styles[style].startTag);
+                this.activeStack.push(style);
             }else{
                 //Copy the old active stack
                 //Close all previous tags
@@ -133,25 +108,46 @@ var EditorBuilder = new(function(){
             $("#cache-" + Editor.MathID).append(val);
         }else{            
             this.stack.splice(this.caret, 0, val);
-            this.caret++;
+            this.caretRight();
         }
+    }
+    this.caretRight = function(){
+        this.caret = Math.min(this.caret + 1, this.stack.length);
+    }
+    this.caretLeft = function(){
+        this.caret = Math.max(this.caret - 1, 0);
     }
     this.bksp = function(){
         if (this.caret >= 0){
             this.stack.splice(this.caret - 1, 1);
-            this.caret--;
+            this.caretLeft();
         }
     }
+    this.del = function(){
+        if (this.caret < this.stack.length){
+            this.stack.splice(this.caret, 1);
+        }
+    }
+    this.newLine = function(){
+        this.append("<br>");
+    }
     this.toString = function(){
-        ret = "";
+        var ret = "";
+        var caret = "<div class='caret-blink'>|</div>";
+        if (this.caret == 0){
+            ret += caret;
+        }
         for (var i = 0; i < this.stack.length; ++i){
+            var chunk = "";
             if (this.stack[i].split("-")[0] == "CACHE"){
-                ret += $("#cache-" + this.stack[i].split("-")[1]).prop('outerHTML');
+                chunk = "<div style='display:inline'>" + $("#cache-" + this.stack[i].split("-")[1]).html() + "</div>";
             }else{
-                ret += this.stack[i];
+                chunk = this.stack[i];
             }
+            chunk = "<span class='chunk' data-index='" + i + "'>" + chunk + "</span>";
+            ret += chunk;
             if (i == this.caret - 1){
-                ret += "<div class='caret-blink'>_</div>"
+                ret += caret;
             }
         }
         return ret;
@@ -169,7 +165,11 @@ function update(){
         MathJax.Hub.Queue(("cache-" + Editor.RenderID).toString(), ["Typeset", MathJax.Hub]);
         Editor.RenderID = 0;
     }
-    //MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+    $(".chunk").click(function(e){
+        EditorBuilder.caret = $(this).data('index');
+        update();
+    });
+   //MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
 }
 $(document).ready(function(){  
     jQuery.fn.extend({
@@ -234,8 +234,25 @@ $(document).ready(function(){
                 EditorBuilder.toggleStyle(ch);
                 e.preventDefault();
             }
-        }else if (e.which == 8){
-            EditorBuilder.bksp();
+        }else{
+            switch (e.which){
+                case 8:     //Backspace
+                    EditorBuilder.bksp();
+                    break;
+                case 9:
+                    EditorBuilder.append("<span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>");
+                    e.preventDefault();
+                    break;
+                case 39:    //Right arrow key
+                    EditorBuilder.caretRight();
+                    break;
+                case 37:    //Left arrow key
+                    EditorBuilder.caretLeft();
+                    break;
+                case 46:
+                    EditorBuilder.del();
+                    break;
+            }
         }
 
         $("#debug-keycode-keydown").html("KEYDOWN: " + e.which); 
@@ -245,13 +262,16 @@ $(document).ready(function(){
         var ch = String.fromCharCode(e.which);
         var preventDefault = true;
         $("#debug-keycode").html("KEYCODE: " + e.which); 
-        switch (e.which){
-            case 13:
-                EditorBuilder.append("<br>");
-                break;
-            
-            default:
-                EditorBuilder.append(ch);
+        if (!e.ctrlKey){
+            switch (e.which){
+                case 13:
+                    EditorBuilder.newLine();
+                    break;
+                case 96:
+                    break;
+                default:
+                    EditorBuilder.append(ch);
+            }
         }
         if (preventDefault){
             e.preventDefault();
@@ -267,5 +287,41 @@ $(document).ready(function(){
         $("#editor").noScrollFocus();
         $("#editor").html(EditorBuilder.toString());
     });
+
+
     $("#editor").focus();
+    update();
+    notifyHuge("<em style='font-family:Oregano, cursive;'>scribble</em>");
+    setTimeout(function(){notify("Tip: Press ~ to type math.")}, 4000);
 });
+function notify(text, color){
+    if (color === undefined){
+        color = "#b8f7ff";
+    }
+    $("#notify-bar").css("color", color);
+    $("#notify-bar").css("height", "50px");
+    $("#notify-bar").html(text);
+    $("#notify-bar").css("line-height", "50px");
+    setTimeout(function(){
+        $("#notify-bar").css("height", "0px");
+        $("#notify-bar").html("");
+        $("#notify-bar").css("line-height", "0px");
+    }, 4000);
+}
+function notifyHuge(text, color){
+    if (color === undefined){
+        color = "#b8f7ff";
+    }
+    $("#notify-bar").css("color", color);
+    $("#notify-bar").css("height", "100px");
+    $("#notify-bar").css("font-size", "3em");
+    $("#notify-bar").html(text);
+    $("#notify-bar").css("line-height", "100px");
+    setTimeout(function(){
+        $("#notify-bar").css("height", "0px");
+        $("#notify-bar").html("");
+        $("#notify-bar").css("line-height", "0px");
+        $("#notify-bar").css("font-size", "1.25em");
+    }, 2000);
+
+}

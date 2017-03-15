@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<head>
+<link rel="stylesheet" href="eqn/mathquill.css"/>
+</head>
+<div id="eqn-editor" class="modal fade" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">Equation Editor</h4>
+            </div>
+            <div class="modal-body">
+                <span id="eqn-editor-input" class="" autofocus></span>
+                <div id="eqn-editor-output" style="min-height:100px"></div>
+            </div>
+            <div class="modal-footer">
+                <p>Press ALT+ENTER to submit</p>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+<script src="eqn/mathquill.js"></script>
+<script>
+var MQ = MathQuill.getInterface(2);//Initialize mathquill
+var latexEqn = "";
+var MQInput = MQ.MathField(document.getElementById("eqn-editor-input"), {
+                handlers:{
+                    edit:function(){
+                    }
+                }
+            }
+            );
+function submitEqn(){
+    equationValue = MQInput.latex();
+    $("#eqn-editor").modal("toggle");
+    if (onEqnSubmit !== undefined){
+        onEqnSubmit();
+    }
+}
+$("#eqn-editor-input").keyup(function(e){    
+    if (e.which == 13 && e.altKey)
+    //Press enter
+    {
+       submitEqn(); 
+    }
+});
+var equationValue = "";
+
+$('#eqn-editor').on('shown.bs.modal', function() {
+    MQInput.focus();
+});
+$(document).on("keypress", function (e) {
+    if (e.which == "`".charCodeAt(0)){
+        if (preEqnDialog !== undefined){
+            preEqnDialog();
+        }
+        $("#eqn-editor").modal("toggle");
+        return false;
+    }
+    
+});
+
+$(document).ready(function(){
+    jQuery.fn.extend({
+        insertAtCaret: function(myValue){
+            return this.each(function(i) {
+                if (document.selection) {
+                    //For browsers like Internet Explorer
+                    this.focus();
+                    var sel = document.selection.createRange();
+                    sel.text = myValue;
+                    this.focus();
+                }
+                else if (this.selectionStart || this.selectionStart == '0') {
+                    //For browsers like Firefox and Webkit based
+                    var startPos = this.selectionStart;
+                    var endPos = this.selectionEnd;
+                    var scrollTop = this.scrollTop;
+                    this.value = this.value.substring(0, startPos)+myValue+this.value.substring(endPos,this.value.length);
+                    this.focus();
+                    this.selectionStart = startPos + myValue.length;
+                    this.selectionEnd = startPos + myValue.length;
+                    this.scrollTop = scrollTop;
+                    } else {
+                    this.value += myValue;
+                    this.focus();
+                }
+            });
+        }
+    });
+});
+
+var caretLocation = 0;
+preEqnDialog = function(){
+    caretLocation = $('#raw_in').prop("selectionStart");
+}
+onEqnSubmit = function(){
+    var MathID = Math.floor((Math.random() * 349582347) + 1);
+    $("#cache").append("<div id='cache-" + MathID + "' class='cached-item'>$" + equationValue + "$</div>")
+    MathJax.Hub.Queue(("cache-" + MathID).toString(), ["Typeset", MathJax.Hub], function(){
+        EditorBuilder.append("CACHE-" +  MathID);
+        $("#editor").noScrollFocus();
+        update();
+    });
+}
+</script>
